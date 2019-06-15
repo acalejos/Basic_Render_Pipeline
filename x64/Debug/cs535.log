@@ -1,0 +1,9 @@
+﻿  Performing Custom Build Tools
+  CGInterface.cpp
+  framebuffer.cpp
+  gui.cxx
+  ppc.cpp
+  scene.cpp
+  tm.cpp
+  Generating Code...
+  cs535.vcxproj -> C:\Users\andre\Documents\Purdue\AY19-1\CS535\CS535\x64\Debug\cs535.exe

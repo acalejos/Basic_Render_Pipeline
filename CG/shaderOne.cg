@@ -1,0 +1,130 @@
+#pragma target 3.0
+struct VertexDataInput {
+	float4 vertex: POSITION;
+	float3 normal: NORMAL;
+	float3 color: COLOR;
+};
+
+struct VertexDataOutput {
+	float4 projv  : POSITION;
+	float3 normal: TEXCOORD0;
+	float3 vxyz: TEXCOORD1;
+	float3 color : COLOR;
+};
+
+struct PixelDataOutput {
+	float3 color : COLOR;
+};
+
+int intersects(float3 O, float3 direction, float3 v0, float3 v1, float3 v3, float3 xyz){
+	//calculate normals
+	float3 normal = cross((v1-v0),(v3-v0));
+	float scalar = dot(normal,(v0-O))/dot(normal,(xyz-O));
+	if (scalar < 0.0 || scalar > 1.0)
+		return 0;
+	float3 P = O + (scalar*direction); //point of intersection
+	// Check if point is inside of box face
+	float s = (dot(normalize(v3-v0), P-v0))/(length(v3-v0));
+	float t = (dot(normalize(v1-v0), P-v0))/(length(v1-v0));
+	if (s>0.0 && s<1.0 && t>0.0 && t<1.0)
+		return 1;
+	return 0;
+}
+VertexDataOutput VertexMain(VertexDataInput vdi, 
+  uniform float4x4 modelViewProj, 
+  uniform float MR, uniform float3 MC, uniform float Mf) {
+
+  VertexDataOutput ret;
+  ret.projv = mul(modelViewProj, vdi.vertex);
+
+  //float3 rdir = normalize(vdi.vertex.xyz - MC);
+  //float3 Vp = MC + rdir*MR;
+  //float3 mvertex = vdi.vertex.xyz + (Vp-vdi.vertex.xyz)*Mf;
+  //ret.projv = mul(modelViewProj, float4(mvertex, 1.0f));
+
+  ret.normal = vdi.normal;
+  ret.vxyz = vdi.vertex.xyz;
+  ret.color = vdi.color;
+  return ret;
+
+}
+
+TRIANGLE void GeometryMain(AttribArray<VertexDataOutput> tverts,
+	uniform float4x4 modelViewProj) {
+
+	emitVertex(tverts[0]);
+	emitVertex(tverts[1]);
+	emitVertex(tverts[2]);
+	return;
+
+}
+
+
+PixelDataOutput FragmentMain(VertexDataOutput pdi, uniform float ka,
+	uniform float3 C0, uniform float3 C1) {
+
+  PixelDataOutput ret;
+  ret.color = pdi.color;
+  return ret;
+
+//  float ka = 0.2f;
+  float3 L = float3(0.0f, 0.0f, 0.0f);
+  float3 lv = float3(0.0f, 0.0f, 1.0f);
+  float kd = mul(pdi.normal, lv);
+  kd = (kd < 0.0f) ? 0.0f : kd;
+  float3 mc = float3(1.0f, 0.0f, 0.0f);
+  ret.color.rgb = mc * (ka + (1.0f-ka)*kd);
+
+//  ret.color.rgb = (pdi.normal + float3(1.0f, 1.0f, 1.0f))/2.0f;
+//  ret.color.rgb = float3(1.0f, 0.0f, 0.0f);
+
+//	ret.color.rgb = float3(0.0f, 0.0f, 0.0f);
+//	ret.color.g = ka;
+	
+	ret.color.rgb = float3(0.0f, 0.0f, 0.0f);
+	ret.color.rgb = (C0 + float3(150.0f, 150.0f, 150.0f)) / 30.0f;
+
+    return ret;
+
+
+
+}
+
+PixelDataOutput FragmentShadow(VertexDataOutput pdi,
+		uniform float3 v0, uniform float3 v1, uniform float3 v2, uniform float3 v5, 
+		uniform float3 L) {
+	PixelDataOutput ret;
+	
+	float3 v3 = float3(v2[0],v0[1],v2[2]);
+	float3 v4 = float3(v0[0],v0[1],v5[2]);
+	float3 v6 = float3(v2[0],v2[1],v5[2]);
+	float3 v7 = float3(v2[0],v0[1],v5[2]);
+
+	float fragmentCounter = 0.2;
+	//ret.color.rgb = pdi.color.rgb;
+	//int count = 0;
+	for (int i = 0; i < 4; i++){
+		for (int j = 0; j <4; j++){
+			int count = 0;
+			float3 currentLight = L + i*float3(20.0,0.0,0.0) + j*float3(0.0,20.0,0.0);
+			float3 lightRay = pdi.vxyz-currentLight;
+			count += intersects(currentLight, lightRay,v4, v5, v0, pdi.vxyz); //top face 
+			//count += intersects(currentLight, lightRay,v0,v1,v3,pdi.vxyz); //front face
+			//count += intersects(currentLight, lightRay,v4,v5,v7,pdi.vxyz); //back face
+			//count += intersects(currentLight, lightRay,v4,v5,v0,pdi.vxyz); //left face
+			//count += intersects(currentLight, lightRay,v3,v2,v6,pdi.vxyz); //right face
+			if (count == 0)
+				fragmentCounter+=0.2;
+			
+		}
+	}
+	float lightAmount = fragmentCounter;
+	//float lightAmount = fragmentCounter/(2*2);
+	ret.color.rgb = lightAmount * pdi.color.rgb;
+	//ret.color.rgb = pdi.color.rgb;
+	return ret;
+}
+
+
+
+
